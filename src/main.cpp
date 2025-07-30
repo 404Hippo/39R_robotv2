@@ -2,8 +2,8 @@
 #include "lemlib/api.hpp" // IWYU pragma: keep
 
 // motor groups
-pros::MotorGroup leftMotors({-14, -15, -16}, pros::MotorGearset::blue); // left motor group - ports 3 (reversed), 4, 5 (reversed)
-pros::MotorGroup rightMotors({11, 12, 13}, pros::MotorGearset::blue); // right motor group - ports 6, 7, 9 (reversed)
+pros::MotorGroup leftMotors({-14, -15, -16}, pros::MotorGearset::blue); // left motor group
+pros::MotorGroup rightMotors({11, 12, 13}, pros::MotorGearset::blue); // right motor group
 
 // Inertial Sensor on port 10
 pros::Imu imu(10);
@@ -18,7 +18,7 @@ lemlib::TrackingWheel vertical(&verticalEnc, lemlib::Omniwheel::NEW_275, -2.5);
 // drivetrain settings
 lemlib::Drivetrain drivetrain(&leftMotors, // left motor group
                               &rightMotors, // right motor group
-                              11.5, // 10 inch track width
+                              11.5, // 11.5 inch track width
                               lemlib::Omniwheel::NEW_275, // using new 4" omnis
                               450, // drivetrain rpm is 360
                               8 // horizontal drift is 2. If we had traction wheels, it would have been 8
@@ -77,6 +77,7 @@ lemlib::Chassis chassis(drivetrain, linearController, angularController, sensors
  * All other competition modes are blocked by initialize; it is recommended
  * to keep execution time for this mode under a few seconds.
  */
+
 void initialize() {
     pros::lcd::initialize(); // initialize brain screen
     chassis.calibrate(); // calibrate sensors
@@ -107,11 +108,13 @@ void initialize() {
 /**
  * Runs while the robot is disabled
  */
+
 void disabled() {}
 
 /**
  * runs after initialize if the robot is connected to field control
  */
+
 void competition_initialize() {}
 
 // get a path used for pure pursuit
@@ -123,6 +126,7 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
  *
  * This is an example autonomous routine which demonstrates a lot of the features LemLib has to offer
  */
+
 void autonomous() {
     // Move to x: 20 and y: 15, and face heading 90. Timeout set to 4000 ms
     chassis.moveToPose(20, 15, 90, 4000);
@@ -159,6 +163,9 @@ void autonomous() {
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
 void opcontrol() {
+    // set all drive motors to coast mode in one line
+    leftMotors.set_brake_modes(pros::E_MOTOR_BRAKE_COAST), rightMotors.set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
+    
     // loop forever
     while (true) {
         // get left y and right y positions
