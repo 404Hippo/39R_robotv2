@@ -1,19 +1,20 @@
 #include "main.h"
+#include "pros/adi.hpp"
 #include "lemlib/api.hpp" // IWYU pragma: keep
 
 // motor groups
-pros::MotorGroup leftMotors({-14, -15, -16}, pros::MotorGearset::blue); // left motor group
-pros::MotorGroup rightMotors({11, 12, 13}, pros::MotorGearset::blue); // right motor group
+pros::MotorGroup leftMotors({-11, -12, -13}, pros::MotorGearset::blue); // left motor group
+pros::MotorGroup rightMotors({18, 19, 20}, pros::MotorGearset::blue); // right motor group
 
 // Inertial Sensor on port 10
-pros::Imu imu(10);
+pros::Imu imu(17);
 
 // tracking wheels
 // vertical tracking wheel encoder. Rotation sensor, port 11, reversed
-pros::Rotation verticalEnc(10);
+pros::Rotation verticalEnc(16);
 
 // vertical tracking wheel. 2" diameter, 2.5" offset, left of the robot (negative)
-lemlib::TrackingWheel vertical(&verticalEnc, lemlib::Omniwheel::NEW_2, -2.5);
+lemlib::TrackingWheel vertical(&verticalEnc, lemlib::Omniwheel::NEW_2, 0);
 
 // drivetrain settings
 lemlib::Drivetrain drivetrain(&leftMotors, // left motor group
@@ -71,6 +72,59 @@ lemlib::ExpoDriveCurve steerCurve(3, // joystick deadband out of 127
 // create the chassis
 lemlib::Chassis chassis(drivetrain, linearController, angularController, sensors, &throttleCurve, &steerCurve);
 
+pros::Motor intake2(-9, pros::v5::MotorGears::green);
+pros::Motor intake(-10, pros::v5::MotorGears::green);
+
+//pneumatics
+pros::adi::Pneumatics scraper('H', false);
+
+bool TopScore = true;
+    
+void setIntake(int intakePower){
+    if (TopScore) {
+        intake.move(intakePower);
+        intake2.move(intakePower);
+    }
+    else {
+        intake.move(intakePower);
+        intake2.move(intakePower * -1);
+    }
+}
+
+bool isScraperExtended = false;
+
+pros::Controller controller(pros::E_CONTROLLER_MASTER);
+
+pros::Motor TopSpinner(2, pros::v5::MotorGears::green);
+
+pros::Motor BottomSpinner(-1, pros::v5::MotorGears::green);
+
+//color sensor
+pros::Optical colorsensor(3);
+
+bool colorsortOn = false; // flag to control color sorting
+
+// red colorValue > 330 || colorValue < 30)
+// blue colorValue > 150 && colorValue < 270
+
+void colorSort(){
+    while (colorsortOn) {
+        // Get the hue value from the color sensor
+        double colorValue = colorsensor.get_hue();
+
+        // Check if the detected color is blue
+        if(colorValue > 150 && colorValue < 270){
+            BottomSpinner.move(0);
+            TopSpinner.move(0);
+            pros::delay(1000);
+        }
+        else {
+            BottomSpinner.move(0)
+            TopSpinner.move(127);
+        }
+    }
+}
+
 /**
  * Runs initialization code. This occurs as soon as the program is started.
  *
@@ -81,6 +135,14 @@ lemlib::Chassis chassis(drivetrain, linearController, angularController, sensors
 void initialize() {
     pros::lcd::initialize(); // initialize brain screen
     chassis.calibrate(); // calibrate sensors
+    
+pros::Task colorTask([]{
+    while (true) {
+        colorSort();
+        pros::delay(10);
+    }
+});
+
 
     // the default rate is 50. however, if you need to change the rate, you
     // can do the following.
@@ -159,15 +221,15 @@ void autonomous() {
 /**
  * Runs in driver control
  */
-
-pros::Controller controller(pros::E_CONTROLLER_MASTER);
+//motors
 
 void opcontrol() {
-    // set all drive motors to coast mode in one line
-    leftMotors.set_brake_modes(pros::E_MOTOR_BRAKE_COAST), rightMotors.set_brake_modes(pros::E_MOTOR_BRAKE_COAST);
-    
+    intake.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
+    intake2.set_brake_mode(pros::E_MOTOR_BRAKE_BRAKE);
+
     // loop forever
     while (true) {
+        colorsortOn = false;
         // get left y and right y positions
         int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
         int rightY = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_Y);
@@ -175,6 +237,35 @@ void opcontrol() {
         // move the robot
         chassis.tank(leftY, rightY);
 
+        if (controller.get_digital(DIGITAL_L2)) {
+            colorsortOn = false;
+            BottomSpinner.move(-127);
+            TopSpinner.move(0);
+        }
+        else {
+            colorsortOn = true  ;
+        }
+
+        if (controller.get_digital_new_press(DIGITAL_DOWN)) {
+            if (isScraperExtended) {
+                scraper.retract(); // retract the scraper
+                isScraperExtended = false; // update the state
+            } else {
+                scraper.extend(); // extend the scraper
+                isScraperExtended = true; // update the state
+            }
+        }
+
+        setIntake((controller.get_digital(DIGITAL_R1) - controller.get_digital(DIGITAL_R2)) * 127);
+
+        if (controller.get_digital_new_press(DIGITAL_L1)) {
+            if (TopScore) {
+                TopScore = false; // set the top score to true
+            } else {
+                TopScore = true; // set the top score to true
+            }
+        }
+    
         // delay to save resources
         pros::delay(25);
     }
