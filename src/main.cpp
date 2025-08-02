@@ -11,7 +11,7 @@ pros::Imu imu(17);
 
 // tracking wheels
 // vertical tracking wheel encoder. Rotation sensor, port 11, reversed
-pros::Rotation verticalEnc(16);
+pros::Rotation verticalEnc(-16);
 
 // vertical tracking wheel. 2" diameter, 2.5" offset, left of the robot (negative)
 lemlib::TrackingWheel vertical(&verticalEnc, lemlib::Omniwheel::NEW_2, 0);
@@ -119,7 +119,7 @@ void colorSort(){
             pros::delay(1000);
         }
         else {
-            BottomSpinner.move(0)
+            BottomSpinner.move(0);
             TopSpinner.move(127);
         }
     }
@@ -136,12 +136,12 @@ void initialize() {
     pros::lcd::initialize(); // initialize brain screen
     chassis.calibrate(); // calibrate sensors
     
-pros::Task colorTask([]{
-    while (true) {
-        colorSort();
-        pros::delay(10);
-    }
-});
+    pros::Task colorTask([]{
+        while (true) {
+            colorSort();
+            pros::delay(10);
+        }
+    });
 
 
     // the default rate is 50. however, if you need to change the rate, you
@@ -159,8 +159,6 @@ pros::Task colorTask([]{
             pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
             pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
             pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
-            // log position telemetry
-            lemlib::telemetrySink()->info("Chassis pose: {}", chassis.getPose());
             // delay to save resources
             pros::delay(50);
         }
@@ -188,8 +186,89 @@ ASSET(example_txt); // '.' replaced with "_" to make c++ happy
  *
  * This is an example autonomous routine which demonstrates a lot of the features LemLib has to offer
  */
+void test() {
+    // set position to x:0, y:0, heading:0
+    chassis.setPose(0, 0, 0);
+
+    chassis.moveToPose(0, 5, 0, 4000);
+
+    chassis.waitUntilDone(); // wait until the movement is done
+}
+
+void left() {
+    TopScore = true; // set the top score to true
+    chassis.setPose(0, 0, 0); // set position to x:0, y:0, heading:0
+    TopSpinner.move(127); // set top spinner to 127
+    setIntake(127); // set intake to 127
+    chassis.moveToPose(-6, 28, 0, 4000);
+    chassis.waitUntilDone(); // wait until the movement is done
+    chassis.moveToPose(0, 35.75, 45, 4000); 
+    chassis.waitUntilDone(); // wait until the movement is done
+    BottomSpinner.move(-127); // set bottom spinner to 127
+    TopScore = false; // set the top score to false
+    TopSpinner.move(0); // set top spinner to 0
+    setIntake(90); // set intake to 127
+    pros::delay(2000); // wait for 1000ms
+    setIntake(0);
+    BottomSpinner.move(0);
+    chassis.moveToPose(-20, 10, 180, 4000); 
+    chassis.waitUntilDone(); // wait until the movement is done
+    scraper.extend(); // extend the scraper
+    pros::delay(1000); // wait for 1000ms
+    TopScore = true;
+    setIntake(127); // set intake to 127
+    TopSpinner.move(127); // set top spinner to 127
+    chassis.moveToPose(-33, -10.3, 180, 4000); 
+    chassis.waitUntilDone(); // wait until the movement is done
+    pros::delay(1000); // wait for 1000ms
+    chassis.moveToPose(-30, 15.75, 0, 4000);
+    scraper.retract(); // retract the scraper
+    chassis.waitUntilDone(); // wait until the movement is done
+    BottomSpinner.move(-127); // set bottom spinner to 127
+    TopSpinner.move(0); // set top spinner to 0
+
+}
+
+void right(){
+    TopScore = true; // set the top score to true
+    chassis.setPose(0, 0, 0); // set position to x:0, y:0, heading:0
+    TopSpinner.move(127); // set top spinner to 127
+    setIntake(127); // set intake to 127
+    chassis.moveToPose(6, 28, 0, 4000);
+    chassis.waitUntilDone(); // wait until the movement is done
+    chassis.moveToPose(35, -5, 90, 4000); 
+    chassis.waitUntilDone(); // wait until the movement is done
+    chassis.moveToPose(35, 15.75, 0, 4000);
+    chassis.waitUntilDone(); // wait until the movement is done
+    BottomSpinner.move(-127); // set bottom spinner to 127
+    TopSpinner.move(0); // set top spinner to 0
+    setIntake(127);
+
+}
+
+void skills() {
+    TopScore = true; // set the top score to true
+    chassis.setPose(0, 0, 0); // set position to x:0, y:0, heading:0
+    TopSpinner.move(127); // set top spinner to 127
+    setIntake(127); // set intake to 127
+    chassis.moveToPose(6, 20, 0, 4000);
+    chassis.waitUntilDone(); // wait until the movement is done
+    chassis.moveToPose(6, 28, 0, 4000);
+    chassis.waitUntilDone(); // wait until the movement is done
+    chassis.moveToPose(35, -5, 90, 4000); 
+    chassis.waitUntilDone(); // wait until the movement is done
+    chassis.moveToPose(35, 15.75, 0, 4000);
+    chassis.waitUntilDone(); // wait until the movement is done
+    BottomSpinner.move(-127); // set bottom spinner to 127
+    TopSpinner.move(0); // set top spinner to 0
+    setIntake(127);
+}
 
 void autonomous() {
+
+    right();
+
+    /*
     // Move to x: 20 and y: 15, and face heading 90. Timeout set to 4000 ms
     chassis.moveToPose(20, 15, 90, 4000);
     // Move to x: 0 and y: 0 and face heading 270, going backwards. Timeout set to 4000ms
@@ -216,6 +295,7 @@ void autonomous() {
     // wait until the movement is done
     chassis.waitUntilDone();
     pros::lcd::print(4, "pure pursuit finished!");
+    */
 }
 
 /**
